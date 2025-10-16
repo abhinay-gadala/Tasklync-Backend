@@ -2,6 +2,7 @@ import { Types } from "mongoose";
 import type { Request, Response } from "express";
 import taskData from "../models/taskModel.js";
 import userData from "../models/userModel.js";
+import projectData from "../models/projectModel.js";
 import { ta } from "zod/locales";
 
 interface AuthenticatedRequest extends Request {
@@ -26,6 +27,15 @@ export const createTask = async (req: AuthenticatedRequest, res: Response) => {
       assignedTo,
       createdBy: req.user.id,
     });
+
+    // add task id to project's tasks array
+    try {
+      await projectData.findByIdAndUpdate(project, { $push: { tasks: newTask._id } });
+    } catch (e) {
+      // If updating project fails, delete the created task to avoid orphan
+      await taskData.findByIdAndDelete(newTask._id);
+      return res.status(500).json({ message: "Failed to link task to project" });
+    }
 
     res.status(201).json(newTask);
   } catch (err: any) {
@@ -87,7 +97,11 @@ export const deleteTask = async (req: AuthenticatedRequest, res: Response) => {
     }
 
     const taskId = req.params.id;
-    await taskData.findByIdAndDelete(taskId);
+    const deleted = await taskData.findByIdAndDelete(taskId);
+    if (deleted) {
+      // remove task from project's tasks array
+      await projectData.findByIdAndUpdate(deleted.project, { $pull: { tasks: deleted._id } });
+    }
     res.json({ message: "Task deleted successfully" });
   } catch (err: any) {
     res.status(500).json({ message: err.message });

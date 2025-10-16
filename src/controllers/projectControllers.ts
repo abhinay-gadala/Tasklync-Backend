@@ -7,11 +7,11 @@ import { Types } from "mongoose";
 // CREATE PROJECT
 export const createProject = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { name, companyName } = req.body;
+    const { name, companyName, companyAddress, companyEmail } = req.body;
     const adminId = req.user?.id;
 
-    if (!name || !companyName) {
-      return res.status(400).json({ message: "Project name and company name are required" });
+    if (!name || !companyName || !companyAddress || !companyEmail) {
+      return res.status(400).json({ message: "Project name, company name, company address, and company email are required" });
     }
 
     // Generate unique 6-char project code
@@ -23,6 +23,8 @@ export const createProject = async (req: AuthenticatedRequest, res: Response) =>
       adminId,
       members: [adminId],
       companyName,
+      companyAddress,
+      companyEmail
     });
 
     await userData.findByIdAndUpdate(adminId, {

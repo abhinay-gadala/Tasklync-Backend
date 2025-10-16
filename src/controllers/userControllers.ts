@@ -13,17 +13,17 @@ export const signup = async (req:Request, res:Response) => {
   try {
     const { name, email, password } = req.body;
 
-    const existingUser = await userData .findOne({ email });
+    const existingUser = await userData.findOne({ email });
     if (existingUser) return res.status(400).json({ message: "User already exists" });
   
     const hashPassword = await bcrypt.hash(password, 10)
 
-    const user = await userData .create({ name, email, password:hashPassword });
+    const user = await userData.create({ name, email, password:hashPassword });
 
     res.status(201).json({
       message: "User registered successfully",
       token: generateToken(user._id.toString()),
-      user
+      userId: user._id,
     });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -34,7 +34,7 @@ export const login = async (req:Request, res:Response) => {
   try {
     const { email, password } = req.body;
 
-    const user = await userData .findOne({ email });
+    const user = await userData.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const isMatch = await bcrypt.compare(password, user.password)
@@ -43,7 +43,7 @@ export const login = async (req:Request, res:Response) => {
     res.status(200).json({
       message: "Login successful",
       token: generateToken(user._id.toString()),
-      user
+      userId: user._id
     });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
