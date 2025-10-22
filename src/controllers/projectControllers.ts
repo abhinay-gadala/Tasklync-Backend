@@ -7,7 +7,7 @@ import { Types } from "mongoose";
 // CREATE PROJECT
 export const createProject = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { name, companyName, companyAddress, companyEmail } = req.body;
+    const { name, companyName, companyEmail, companyAddress } = req.body;
     const adminId = req.user?.id;
 
     if (!name || !companyName || !companyAddress || !companyEmail) {
@@ -23,8 +23,9 @@ export const createProject = async (req: AuthenticatedRequest, res: Response) =>
       adminId,
       members: [adminId],
       companyName,
-      companyAddress,
-      companyEmail
+      companyEmail,
+      companyAddress
+      
     });
 
     await userData.findByIdAndUpdate(adminId, {
