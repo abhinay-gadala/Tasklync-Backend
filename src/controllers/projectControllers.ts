@@ -76,3 +76,32 @@ export const joinProject = async (req: AuthenticatedRequest, res: Response) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+export const getProjectDetails = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const projectId = req.params.id;
+    if(!projectId){
+      return res.status(400).json({ message: "Project ID is required" });
+    }
+    // populate members (name, email, role) and tasks with basic relations
+    const project = await projectData.findById(projectId)
+      .populate('members', 'name')
+      .populate({
+        path: 'tasks',
+        select: 'title status priority assignedTo createdBy',
+        populate: [
+          { path: 'assignedTo', select: 'name' },
+          { path: 'createdBy', select: 'name' }
+        ]
+      });
+    if(!project){
+      return res.status(404).json({ message: "Project not found" });
+    }
+    res.status(200).json({
+      message: "Project details fetched successfully",
+      project,
+    });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+}

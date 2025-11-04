@@ -12,6 +12,6 @@ const userSchema = new mongoose.Schema({
      projects: [{type: mongoose.Schema.Types.ObjectId, ref: "Project"}]
 }, {timestamps: true})
 
-const userData = mongoose.model("user", userSchema)
+const userData = mongoose.model("User", userSchema)
 
 export default userData;

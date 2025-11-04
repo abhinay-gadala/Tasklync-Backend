@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router } from 'express';
 import { addComment, getComments, editComment, deleteComment } from '../controllers/commentControllers.js'
 import { addReply, editReply, deleteReply } from '../controllers/replyControllers.js'
 import { authMiddleware } from "../middlewares/authMiddleware.js";
@@ -6,14 +6,14 @@ import { authMiddleware } from "../middlewares/authMiddleware.js";
 const routers = Router();
 
 // 🔹 Comments
-routers.post("/comment", authMiddleware, addComment);
-routers.get("/comment/:taskId", authMiddleware, getComments);
-routers.put("/comment", authMiddleware, editComment);
-routers.delete("/comment/:commentId", authMiddleware, deleteComment);
+routers.post("/comments", authMiddleware, addComment);
+routers.get("/comments/:taskId", authMiddleware, getComments);
+routers.put("/comments/:id", authMiddleware, editComment);
+routers.delete("/comments/:id", authMiddleware, deleteComment);
 
 // 🔹 Replies
-routers.post("/reply", authMiddleware, addReply);
-routers.put("/reply", authMiddleware, editReply);
-routers.delete("/reply/:commentId/:replyId", authMiddleware, deleteReply);
+routers.post("/replies", authMiddleware, addReply);
+routers.put("/replies/:id", authMiddleware, editReply);
+routers.delete("/replies/:commentId/:replyId", authMiddleware, deleteReply);
 
 export default routers;
