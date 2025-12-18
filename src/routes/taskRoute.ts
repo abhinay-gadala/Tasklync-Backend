@@ -5,7 +5,7 @@ import {
   getTasks,
   updateTask,
   deleteTask,
-  addComment,
+  getAllTasks
 } from "../controllers/taskControllers.js";
 
 const router = express.Router();
@@ -14,9 +14,9 @@ const router = express.Router();
 router.use(authMiddleware);
 
 router.post("/", createTask);                    // Admin creates task
+router.get("/", getAllTasks);                     // Get all tasks (admin only)
 router.get("/project/:projectId", getTasks);    // Get tasks (admin or employee)
 router.put("/:id", updateTask);                 // Update task
-router.delete("/:id", deleteTask);              // Admin only
-router.post("/:id/comment", addComment);        // Add comment
+router.delete("/:id", deleteTask);           // Admin only
 
 export default router;

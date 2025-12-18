@@ -43,7 +43,8 @@ export const login = async (req:Request, res:Response) => {
     res.status(200).json({
       message: "Login successful",
       token: generateToken(user._id.toString()),
-      user
+      user,
+      needsPasswordReset: user.needsPasswordReset
     });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -52,10 +53,10 @@ export const login = async (req:Request, res:Response) => {
 
 export const getDetails = async (req: Request, res: Response) => {
     try{
-      const user = await userData.find()
+      const users = await userData.find()
       res.status(200).json({
         message: "get Successful",
-        user
+        users
       })
 
     }
@@ -69,13 +70,48 @@ export const getDetails = async (req: Request, res: Response) => {
 export const getUserById = async (req: Request, res: Response) => {
   try {
     const userId = req.params.id;
-    const user = await userData.findById(userId).select('-password');
-    if (!user) return res.status(404).json({ message: "User not found" });
+    const users = await userData.findById(userId).select('-password');
+    if (!users) return res.status(404).json({ message: "User not found" });
 
     res.status(200).json({
       message: "User retrieved successfully",
-      user
+      users
     });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const updateUser = async (req: Request, res: Response) => {
+  try {
+    const userId = req.params.id;
+    const { name, email, password, needsPasswordReset } = req.body;
+
+    const user = await userData.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (password) {
+      user.password = await bcrypt.hash(password, 10);
+      user.needsPasswordReset = false;
+    }
+    if (needsPasswordReset !== undefined) user.needsPasswordReset = needsPasswordReset;
+
+    await user.save();
+    res.json({ message: "User updated", user });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+export const deleteUser = async (req: Request, res: Response) => {
+  try {
+    const userId = req.params.id;
+    const user = await userData.findByIdAndDelete(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });  
+    res.json({ message: "User deleted successfully" });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }

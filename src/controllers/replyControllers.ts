@@ -88,3 +88,26 @@ export const deleteReply = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+export const getReplies = async (req: AuthRequest, res: Response) => {
+  try{
+      const { commentId } = req.params;
+
+    // Find all replies related to this comment
+    const replies = await CommentData.find({ commentId })
+      .populate("user", "name email") // Include user info
+      .sort({ createdAt: 1 }); // Sort oldest → newest
+
+    if (!replies || replies.length === 0) {
+      return res.status(200).json({ message: "No replies found", replies: [] });
+    }
+
+    res.status(200).json({
+      message: "Replies fetched successfully",
+      count: replies.length,
+      replies,
+    });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+}

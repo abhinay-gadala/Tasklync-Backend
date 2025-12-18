@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema({
         enum: ["pending", "admin", "employee"],
         default: "pending"
      },
+     needsPasswordReset: { type: Boolean, default: false },
      projects: [{type: mongoose.Schema.Types.ObjectId, ref: "Project"}]
 }, {timestamps: true})
 
