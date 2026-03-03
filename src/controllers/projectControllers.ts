@@ -105,60 +105,51 @@ export const joinProject = async (req: AuthenticatedRequest, res: Response) => {
     return res.status(500).json({ message: err.message });
   }
 };
+
 export const getProjectDetails = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const projectId = req.params.id;
+    const { id: projectId } = req.params;
     const userId = req.user?.id;
+    const role = req.user?.role;
 
-    if (!projectId) {
-      return res.status(400).json({ 
-        status: "error",
-        message: "Project ID is required" 
+    let project;
+
+    if (role === "admin") {
+      // Admin can access project they created
+      project = await projectData.findOne({
+        _id: projectId,
+        adminId: userId,
+      });
+    } else {
+      // Employee must be a member
+      project = await projectData.findOne({
+        _id: projectId,
+        members: userId,
       });
     }
-
-    // Fetch project with member check
-    const project = await projectData.findOne({
-      _id: projectId,
-      members: userId // Only fetch if user is a member
-    })
-    .populate('members', 'name email role')
-    .populate({
-      path: 'tasks',
-      select: 'title status priority assignedTo createdBy dueDate description',
-      populate: [
-        { path: 'assignedTo', select: 'name email' },
-        { path: 'createdBy', select: 'name email' }
-      ]
-    });
 
     if (!project) {
-      return res.status(404).json({ 
-        status: "error",
-        message: "Project not found or you don't have access" 
-      });
+      return res
+        .status(404)
+        .json({ message: "Project not found or access denied" });
     }
 
-    // Determine user's project role
-    const isAdmin = project.adminId.toString() === userId;
+    await project.populate("members", "name email role");
+    await project.populate({
+      path: "tasks",
+      select: "title status priority assignedTo createdBy dueDate description",
+      populate: [
+        { path: "assignedTo", select: "name email" },
+        { path: "createdBy", select: "name email" },
+      ],
+    });
 
-    res.status(200).json({
-      status: "success",
-      message: "Project details fetched successfully",
-      data: {
-        project: {
-          ...project.toObject(),
-          userRole: isAdmin ? 'admin' : 'member'
-        }
-      }
-    });
+    res.status(200).json({ project });
   } catch (err: any) {
-    res.status(500).json({ 
-      status: "error",
-      message: err.message 
-    });
+    res.status(500).json({ message: err.message });
   }
-}
+};
+
 
 export const getAllProjects = async (req: AuthenticatedRequest, res: Response) => {
   try {

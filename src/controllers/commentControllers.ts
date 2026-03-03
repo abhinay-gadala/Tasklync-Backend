@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import CommentData from "../models/commentModel.js";
-import taskData from "../models/taskModel.js";
+import projectData from "../models/projectModel.js";
 
 interface AuthRequest extends Request {
   user?: {
@@ -9,91 +9,147 @@ interface AuthRequest extends Request {
   };
 }
 
-// ➤ Add a new comment
+/* ============================================================
+   ➤ ADD COMMENT (Workspace-level)
+============================================================ */
 export const addComment = async (req: AuthRequest, res: Response) => {
   try {
-    const { taskId, text } = req.body;
+    const { workspaceId, text } = req.body;
     const userId = req.user!.id;
 
-    const task = await taskData.findById(taskId).populate("project");
-    if (!task) return res.status(404).json({ message: "Task not found" });
-
-    const project = task.project as any;
-    if (!project.members.includes(userId) && req.user!.role !== "admin") {
-      return res.status(403).json({ message: "Not authorized to comment" });
+    if (!workspaceId || !text) {
+      return res.status(400).json({ message: "workspaceId and text are required" });
     }
 
-    const comment = new CommentData({ task: taskId, user: userId, text });
-    await comment.save();
+    // ✅ Authorization check
+    const project = await projectData.findById(workspaceId);
+    if (!project) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
 
-    res.status(201).json({ message: "Comment added", comment });
+    if (
+      req.user!.role !== "admin" &&
+      !project.members.map(String).includes(userId)
+    ) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    const comment = await CommentData.create({
+      workspace: workspaceId,
+      user: userId,
+      text,
+    });
+
+    const populated = await comment.populate("user", "name role");
+
+    res.status(201).json({
+      message: "Message sent",
+      comment: populated,
+    });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// ➤ Get all comments for a task
+/* ============================================================
+   ➤ GET COMMENTS (Workspace-level)
+============================================================ */
 export const getComments = async (req: AuthRequest, res: Response) => {
   try {
-    const { taskId } = req.params;
+    const { workspaceId } = req.params;
     const userId = req.user!.id;
 
-    const task = await taskData.findById(taskId).populate("project");
-    if (!task) return res.status(404).json({ message: "Task not found" });
-
-    const project = task.project as any;
-    if (!project.members.includes(userId) && req.user!.role !== "admin") {
-      return res.status(403).json({ message: "Not authorized to view comments" });
+    if (!workspaceId) {
+      return res.status(400).json({ message: "workspaceId is required" });
     }
 
-    const comments = await CommentData.find({ task: taskId })
-      .populate("user", "name role")
-      .populate("replies.user", "name role");
+    const project = await projectData.findById(workspaceId);
+    if (!project) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
 
-    res.status(200).json(comments);
+    if (
+      req.user!.role !== "admin" &&
+      !project.members.map(String).includes(userId)
+    ) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    const comments = await CommentData.find({ workspace: workspaceId })
+      .populate("user", "name role")
+      .populate("replies.user", "name role")
+      .sort({ createdAt: 1 });
+
+    res.status(200).json({
+      count: comments.length,
+      comments,
+    });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// ➤ Edit a comment
+/* ============================================================
+   ➤ EDIT COMMENT
+============================================================ */
 export const editComment = async (req: AuthRequest, res: Response) => {
   try {
-    const { commentId, text } = req.body;
+    const { id } = req.params; // ✅ FIXED
+    const { text } = req.body;
     const userId = req.user!.id;
 
-    const comment = await CommentData.findById(commentId);
-    if (!comment) return res.status(404).json({ message: "Comment not found" });
+    if (!text) {
+      return res.status(400).json({ message: "Text is required" });
+    }
 
-    if (comment.user.toString() !== userId && req.user!.role !== "admin") {
-      return res.status(403).json({ message: "Not authorized to edit comment" });
+    const comment = await CommentData.findById(id);
+    if (!comment) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    if (
+      comment.user.toString() !== userId &&
+      req.user!.role !== "admin"
+    ) {
+      return res.status(403).json({ message: "Not authorized" });
     }
 
     comment.text = text;
     comment.updatedAt = new Date();
     await comment.save();
 
-    res.status(200).json({ message: "Comment updated", comment });
+    res.status(200).json({
+      message: "Message updated",
+      comment,
+    });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// ➤ Delete a comment
+/* ============================================================
+   ➤ DELETE COMMENT
+============================================================ */
 export const deleteComment = async (req: AuthRequest, res: Response) => {
   try {
-    const { commentId } = req.params;
+    const { id } = req.params; // ✅ FIXED
     const userId = req.user!.id;
 
-    const comment = await CommentData.findById(commentId);
-    if (!comment) return res.status(404).json({ message: "Comment not found" });
+    const comment = await CommentData.findById(id);
+    if (!comment) {
+      return res.status(404).json({ message: "Message not found" });
+    }
 
-    if (comment.user.toString() !== userId && req.user!.role !== "admin") {
-      return res.status(403).json({ message: "Not authorized to delete comment" });
+    if (
+      comment.user.toString() !== userId &&
+      req.user!.role !== "admin"
+    ) {
+      return res.status(403).json({ message: "Not authorized" });
     }
 
     await comment.deleteOne();
-    res.status(200).json({ message: "Comment deleted" });
+
+    res.status(200).json({ message: "Message deleted" });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }

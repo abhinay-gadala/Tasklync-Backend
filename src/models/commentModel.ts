@@ -8,7 +8,7 @@ interface IReply {
 }
 
 export interface IComment extends Document {
-  task: Types.ObjectId;
+  workspace: Types.ObjectId;
   user: Types.ObjectId;
   text: string;
   createdAt: Date;
@@ -24,7 +24,7 @@ const replySchema = new Schema<IReply>({
 });
 
 const commentSchema = new Schema<IComment>({
-  task: { type: Schema.Types.ObjectId, ref: "Task", required: true },
+  workspace: { type: Schema.Types.ObjectId, ref: "Project", required: true, index: true, },
   user: { type: Schema.Types.ObjectId, ref: "User", required: true },
   text: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },
