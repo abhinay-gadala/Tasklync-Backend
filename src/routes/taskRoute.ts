@@ -7,16 +7,18 @@ import {
   deleteTask,
   getAllTasks
 } from "../controllers/taskControllers.js";
+import { validate } from "../middlewares/validate.js";
+import { taskSchema } from "../validations/appValidations.js";
 
 const router = express.Router();
 
 // All routes protected by authMiddleware
 router.use(authMiddleware);
 
-router.post("/", createTask);                    // Admin creates task
+router.post("/", validate(taskSchema), createTask);                    // Admin creates task
 router.get("/", getAllTasks);                     // Get all tasks (admin only)
 router.get("/project/:projectId", getTasks);    // Get tasks (admin or employee)
-router.put("/:id", updateTask);                 // Update task
+router.put("/:id", validate(taskSchema), updateTask);                 // Update task
 router.delete("/:id", deleteTask);           // Admin only
 
 export default router;

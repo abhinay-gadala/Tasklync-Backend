@@ -1,4 +1,10 @@
 import type { Response } from "express";
+import jwt from "jsonwebtoken";
+
+// Generate a new token with updated privileges
+const generateToken = (id: string, role?: string) => {
+  return jwt.sign({ id, role }, process.env.JWT_SECRET as string, { expiresIn: "7d" });
+};
 import projectData from "../models/projectModel.js";
 import userData from "../models/userModel.js";
 import taskData from "../models/taskModel.js";
@@ -10,7 +16,7 @@ import { Types } from "mongoose";
 const generateUniqueProjectCode = async (): Promise<string> => {
   let projectCode: string;
   let isUnique = false;
-  
+
   while (!isUnique) {
     projectCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     const existingProject = await projectData.findOne({ code: projectCode });
@@ -29,22 +35,22 @@ export const createProject = async (req: AuthenticatedRequest, res: Response) =>
     const adminId = req.user?.id;
 
     if (!name || !companyName || !companyAddress || !companyEmail) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         status: "error",
-        message: "Project name, company name, company address, and company email are required" 
+        message: "Project name, company name, company address, and company email are required"
       });
     }
 
     // Check if project name already exists for this admin
-    const existingProject = await projectData.findOne({ 
+    const existingProject = await projectData.findOne({
       name: { $regex: new RegExp(`^${name}$`, 'i') },
-      adminId 
+      adminId
     });
-    
+
     if (existingProject) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         status: "error",
-        message: "A project with this name already exists" 
+        message: "A project with this name already exists"
       });
     }
 
@@ -68,9 +74,16 @@ export const createProject = async (req: AuthenticatedRequest, res: Response) =>
       $addToSet: { projects: project._id }, // Use addToSet to prevent duplicates
     });
 
+    // Generate upgraded Token
+    const refreshedToken = generateToken(adminId, "admin");
+
     res.status(201).json({
       status: "success",
       message: "Project created successfully",
+      token: refreshedToken,
+      user: {
+        role: "admin"
+      },
       project: {
         _id: project._id,
         name: project.name,
@@ -99,9 +112,16 @@ export const joinProject = async (req: AuthenticatedRequest, res: Response) => {
     // add project to user's projects array using $addToSet
     await userData.findByIdAndUpdate(userId, { $addToSet: { projects: project._id }, $set: { role: "employee" } });
 
-    return res.status(200).json({ message: "Joined project successfully", projectId: project._id });
+    // Generate upgraded Token
+    const refreshedToken = generateToken(userId, "employee");
+
+    return res.status(200).json({
+      message: "Joined project successfully",
+      projectId: project._id,
+      token: refreshedToken,
+      user: { role: "employee" }
+    });
   } catch (err: any) {
-    console.error("joinProject:", err);
     return res.status(500).json({ message: err.message });
   }
 };
@@ -178,7 +198,6 @@ export const getAllProjects = async (req: AuthenticatedRequest, res: Response) =
       projects,
     });
   } catch (err: any) {
-    console.error("getAllProjects error:", err);
     return res.status(500).json({ message: err.message || "Server error" });
   }
 };
@@ -308,7 +327,6 @@ export const deleteProject = async (req: AuthenticatedRequest, res: Response) =>
         "Project, its tasks, and related member links were deleted successfully",
     });
   } catch (err: any) {
-    console.error("deleteProject error:", err);
     return res.status(500).json({
       status: "error",
       message: err.message || "Server error",

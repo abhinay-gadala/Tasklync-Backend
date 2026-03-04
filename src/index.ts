@@ -13,7 +13,10 @@ const app = express();
 dotenv.config()
 
 app.use(express.json())
-app.use(cors())
+app.use(cors({
+   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+   credentials: true
+}))
 app.use("/user", route)
 app.use("/project", routes)
 app.use("/task", router)
@@ -21,25 +24,30 @@ app.use("/comment", routers)
 app.use("/invite", routem)
 
 const URL = process.env.MONGO_DB;
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3005;
 
-if(!URL){
-   console.log("MongoDB url is missing in .env file")
+if (!URL) {
+   console.error("CRITICAL: MongoDB url (MONGO_DB) is missing in .env file")
    process.exit(1)
 }
 
-async function Main(){
-    try{
-       await connectDB(URL as String)
-       app.listen(PORT, () => {
-          console.log(`Server started on Port ${PORT}`)
-       })
+if (!process.env.JWT_SECRET) {
+   console.error("CRITICAL: JWT_SECRET is missing in .env file. Running without one is insecure.")
+   process.exit(1)
+}
 
-    }
-    catch(error){
-        console.log("Failed to Connect")
-       process.exit(1)
-    }
+async function Main() {
+   try {
+      await connectDB(URL as String)
+      app.listen(PORT, () => {
+         console.log(`Server started on Port ${PORT}`)
+      })
+
+   }
+   catch (error) {
+      console.log("Failed to Connect")
+      process.exit(1)
+   }
 }
 
 Main();
