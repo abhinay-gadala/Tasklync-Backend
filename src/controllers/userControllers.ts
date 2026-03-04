@@ -107,6 +107,24 @@ export const updateUser = async (req: Request, res: Response) => {
   }
 };
 
+export const setPassword = async (req: Request, res: Response) => {
+  try {
+    const { userId, password } = req.body;
+    if (!userId || !password) return res.status(400).json({ message: "User ID and password are required" });
+
+    const user = await userData.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.password = await bcrypt.hash(password, 10);
+    user.needsPasswordReset = false;
+
+    await user.save();
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 
 export const deleteUser = async (req: AuthenticatedRequest, res: Response) => {
   try {

@@ -16,7 +16,10 @@ export const taskSchema = z.object({
     description: z.string().optional(),
     status: z.enum(["todo", "in-progress", "done"]).optional(),
     priority: z.enum(["Low", "Medium", "High"]).optional(),
-    assignedTo: z.string().optional(),
+    assignedTo: z.string().optional().nullable(),
+    assignedEmail: z.string().email("Invalid email").optional().nullable(),
     project: z.string().min(1, "A project ID is required"),
-    dueDate: z.string().optional()
+    dueDate: z.string().optional().nullable()
 });
+
+export const updateTaskSchema = taskSchema.partial();
